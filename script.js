@@ -14,7 +14,6 @@ let running = false;
 let countdownId, moleTimeoutId, lastIndex;
 const moles = [];
 
-// Create the 9 holes with a mole in each
 for (let i = 0; i < HOLE_COUNT; i++) {
   const hole = document.createElement('div');
   hole.className = 'hole';
@@ -29,7 +28,6 @@ for (let i = 0; i < HOLE_COUNT; i++) {
   moles.push(mole);
 }
 
-// Random helpers
 function randomTime(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -41,11 +39,10 @@ function randomMole() {
   return moles[i];
 }
 
-// Pop up a random mole, hide it, then repeat
 function popMole() {
   if (!running) return;
   const mole = randomMole();
-  const max = timeLeft > 15 ? 1000 : 700;   // faster near the end
+  const max = timeLeft > 15 ? 1000 : 700;   
   const duration = randomTime(400, max);
 
   mole.classList.add('up');
@@ -55,7 +52,6 @@ function popMole() {
   }, duration);
 }
 
-// Player clicks a mole
 function whack(mole) {
   if (!running || !mole.classList.contains('up')) return;
   score++;

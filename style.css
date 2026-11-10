@@ -1,0 +1,118 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, sans-serif;
+  background: #a8d5a2;
+}
+
+.game {
+  text-align: center;
+  padding: 16px;
+}
+
+h1 {
+  color: #2f4f2f;
+}
+
+/* Score and time */
+.scoreboard {
+  display: flex;
+  justify-content: space-around;
+  font-size: 1.4rem;
+  margin: 10px 0;
+}
+
+/* Buttons */
+button {
+  font-size: 1rem;
+  padding: 10px 20px;
+  margin: 4px;
+  border: none;
+  border-radius: 8px;
+  background: #3b7d3b;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2f632f;
+}
+
+/* The 3 x 3 grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: min(90vw, 420px);
+  margin: 16px auto;
+}
+
+/* Each hole */
+.hole {
+  position: relative;
+  aspect-ratio: 1;
+  background: #5b3a1e;
+  border-radius: 50%;
+  overflow: hidden;          /* hides the mole when it is below the hole */
+}
+
+/* Each mole */
+.mole {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: clamp(2rem, 10vw, 3.5rem);
+  cursor: pointer;
+  user-select: none;
+  transform: translateY(100%);       /* hidden below the hole */
+  transition: transform 0.15s ease-out;
+}
+
+/* When JavaScript adds the class "up", the mole slides up */
+.mole.up {
+  transform: translateY(0);
+}
+
+/* Hit animation */
+.mole.whacked {
+  animation: hit 0.3s;
+}
+
+@keyframes hit {
+  0%   { transform: translateY(0) scale(1); }
+  50%  { transform: translateY(0) scale(1.4) rotate(15deg); filter: brightness(2); }
+  100% { transform: translateY(100%) scale(1); }
+}
+
+/* Game Over screen */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.box {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 14px;
+  text-align: center;
+}
