@@ -3,43 +3,94 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Whack a Mole</title>
+  <title>Whack-a-Mole</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="game">
-    <h1>🔨 Whack a Mole</h1>
+  <!-- ===== START SCREEN ===== -->
+  <main id="start" class="panel">
+    <h1 class="logo">Whack-a-Mole</h1>
+    <p class="tag">Someone is digging up the garden. Stop them.</p>
 
-    <div class="stats">
+    <!-- Warm-up mole: tap it before you play -->
+    <button class="hole demo" id="demoHole" aria-label="Practice mole">
+      <span class="mole" id="demoMole">🐹</span>
+    </button>
+    <p class="warm" id="warmText">Tap the mole to warm up</p>
+
+    <label class="field">Your name
+      <input id="nameInput" maxlength="12" placeholder="Player" autocomplete="off">
+    </label>
+
+    <div class="levels" id="levels" role="group" aria-label="Difficulty">
+      <button class="lvl" data-level="easy"><b>Easy</b><small>35s, one mole</small></button>
+      <button class="lvl on" data-level="medium"><b>Medium</b><small>30s, two moles</small></button>
+      <button class="lvl" data-level="hard"><b>Hard</b><small>25s, three moles</small></button>
+    </div>
+
+    <button class="big" id="playBtn">Play</button>
+    <button class="themeBtn">Night mode</button>
+
+    <section class="legend">
+      <h2>What pops up</h2>
+      <ul>
+        <li><span class="ico">🐹</span> Mole <em>+1</em></li>
+        <li><span class="ico gold">🐹</span> Golden mole <em>+5</em></li>
+        <li><span class="ico">⏰</span> Clock <em>+3 seconds</em></li>
+        <li><span class="ico">🦫</span> Boss mole, 3 hits <em>+10</em></li>
+        <li><span class="ico">💣</span> Bomb <em>-3 and combo lost</em></li>
+      </ul>
+      <p class="note">Hit 5 in a row for double points, 10 in a row for triple. Tapping an empty hole breaks your combo. In the last 8 seconds, frenzy doubles every point.</p>
+    </section>
+
+    <section class="boardwrap">
+      <h2>Top players</h2>
+      <ol class="board" id="boardStart"></ol>
+    </section>
+  </main>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <main id="game" class="panel hidden">
+    <div class="hud">
       <div class="stat">Score <b id="score">0</b></div>
       <div class="stat">Time <b id="time">30</b></div>
+      <div class="stat">Combo <b id="combo">x1</b></div>
       <div class="stat">Best <b id="best">0</b></div>
     </div>
-
     <div class="bar"><div id="barFill"></div></div>
-
-    <div class="controls">
-      <select id="level">
-        <option value="easy">Easy</option>
-        <option value="medium" selected>Medium</option>
-        <option value="hard">Hard</option>
-      </select>
-      <button id="startBtn">Start</button>
-      <button id="restartBtn">Restart</button>
-    </div>
-
-    <p class="hint">🐹 = +1 point &nbsp;&nbsp; 💣 = -3 points</p>
-
+    <p class="frenzyMsg">Frenzy! Double points</p>
     <div class="grid" id="grid"></div>
-  </div>
+    <div class="row">
+      <button id="pauseBtn">Pause</button>
+      <button id="soundBtn">Sound on</button>
+      <button class="themeBtn">Night mode</button>
+      <button id="quitBtn">Menu</button>
+    </div>
+  </main>
 
+  <div class="overlay hidden" id="countdown"><div id="countNum">3</div></div>
+
+  <!-- ===== GAME OVER ===== -->
   <div class="overlay hidden" id="gameOver">
     <div class="box">
-      <h2>Game Over!</h2>
-      <p>Final score: <b id="finalScore">0</b></p>
-      <p id="feedback"></p>
-      <button id="playAgain">Play Again</button>
+      <h2 id="rank">Game over</h2>
+      <p class="final"><b id="finalScore">0</b> points</p>
+      <p id="feedback" class="badge"></p>
+      <div class="results">
+        <div><b id="rHits">0</b>whacks</div>
+        <div><b id="rAcc">0%</b>accuracy</div>
+        <div><b id="rCombo">0</b>best streak</div>
+      </div>
+      <h3>Badges earned</h3>
+      <div class="badges" id="badges"></div>
+      <h3>Top players</h3>
+      <ol class="board" id="boardOver"></ol>
+      <div class="row">
+        <button class="big" id="playAgain">Play again</button>
+        <button id="menuBtn">Menu</button>
+      </div>
     </div>
   </div>
 
