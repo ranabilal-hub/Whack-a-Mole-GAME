@@ -8,7 +8,7 @@ body {
   align-items: center;
   font-family: Arial, sans-serif;
   color: white;
-  background: linear-gradient(160deg, #1b1035, #3b1f6b, #0f3d5e);
+  background: linear-gradient(160deg, #1b1035, #1f606b, #0f5e44);
 }
 
 .game { text-align: center; padding: 16px; }
