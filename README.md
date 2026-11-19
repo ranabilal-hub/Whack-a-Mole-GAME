@@ -1,107 +1,173 @@
 🔨 Whack-a-Mole
-A browser game built with plain HTML, CSS and JavaScript. Moles pop out of the garden, and you have to whack them before time runs out. It has three difficulty levels, power-ups, a boss mole, combo multipliers, badges and a saved leaderboard.
-This was made as an ICT final project. It needs no libraries, no build step and no server.
-Features
-Start screen with a warm-up mole you can tap, name entry, difficulty picker, a guide to every item and a top-5 leaderboard
-3-2-1 countdown before each round
-Three levels that change the time limit, how many moles appear at once, and how often bombs and power-ups show up
-Power-ups and hazards: golden mole, clock, boss mole and bombs
-Combo multiplier for hitting several targets in a row
-Frenzy mode that doubles points in the last 8 seconds
-Badges awarded on the game-over screen
-Leaderboard and name saved in the browser with localStorage
-Pause button, sound on/off, and a day/night theme
-Hammer cursor, hit particles and a score popup on every whack
-Works on desktop and mobile, and respects the reduced-motion setting
-How to play
-Enter your name and choose Easy, Medium or Hard.
-Press Play.
-Click or tap the moles as they pop out of the holes.
-Avoid the bombs. Tapping an empty hole breaks your combo.
-Score as many points as you can before the timer hits zero.
-Scoring
-Item
-Result
-🐹 Mole
-+1 point
-🐹 Golden mole
-+5 points
-🦫 Boss mole
-+10 points, takes 3 hits
-⏰ Clock
-+3 seconds
-💣 Bomb
--3 points and combo lost
-Combo: 5 hits in a row gives x2 points, and 10 in a row gives x3.
-Frenzy: in the last 8 seconds every point is doubled, on top of the combo.
-Levels
-Level
-Time
-Moles at once
-Bomb
-Golden
-Clock
-Boss
-Easy
-35s
-1
-10%
-6%
-5%
-3%
-Medium
-30s
-2
-15%
-7%
-4%
-5%
-Hard
-25s
-3
-22%
-8%
-3%
-7%
-The percentages are the chance that a new pop-up is that item. Everything else is a normal mole.
-Badges
-Badge
-How to earn it
-🎯 Sharpshooter
-90% accuracy or better with at least 10 hits
-🔥 Combo king
-A streak of 10 or more
-🛡️ Bomb dodger
-Hit no bombs, with at least 10 hits
-🌟 Golden touch
-Whack 2 or more golden moles
-🦫 Boss slayer
-Beat a boss mole
-Run it locally
-Download or clone the repository.
-git clone https://github.com/<your-username>/<your-repo>.git
-Open index.html in any modern browser.
-That is all. The Fredoka font loads from Google Fonts when you are online, and the game falls back to a similar rounded system font when you are offline.
-Project structure
-.
-├── index.html   # Start screen, game screen and overlays
-├── style.css    # Garden theme, layout, animations and night mode
-├── script.js    # Game logic, levels, scoring, leaderboard and screens
-└── README.md
-How it works
-LEVELS object in script.js holds the settings for each difficulty, so you can balance the game by changing numbers in one place.
-spawn() and show() pick a free hole at random and decide whether it holds a mole, bomb, golden mole, clock or boss.
-whack() handles every click: misses, bombs, the boss's 3 hits, combo, frenzy and points.
-multiplier() and frenzy() work out the combo and last-seconds bonuses.
-load() and save() wrap localStorage in try/catch, so the game still runs if the browser blocks storage.
-Names on the leaderboard are written with textContent, so nothing a player types can inject HTML.
-Customize it
-Change the time, speed or spawn chances in the LEVELS object at the top of script.js.
-Change colors in the :root block at the top of style.css. The night theme overrides them under body.night.
-Swap the emoji in the ICON object to change how the moles look.
-Concepts used
-DOM manipulation, event handling, timers (setTimeout and setInterval), CSS Grid and Flexbox, CSS animations and custom properties, the Web Audio API, and the localStorage API.
-Zohair Abbas 
-Rana Bilal
-Shahriyar Rehman
-FAST NUCES KARACHI
+
+A browser-based Whack-a-Mole game built using HTML, CSS, and JavaScript. Moles pop out of the garden, and players must hit them before time runs out.
+
+This project was developed as an ICT Final Project at FAST-NUCES Karachi.
+
+The game includes three difficulty levels, power-ups, a boss mole, combo multipliers, achievement badges, and a saved leaderboard. It requires no external libraries, build tools, or server.
+
+✨ Features
+
+- Start screen with a warm-up mole that players can tap.
+- Player name entry and difficulty selection.
+- Game guide explaining all items and a Top 5 leaderboard.
+- 3-2-1 countdown before each round.
+- Three difficulty levels: Easy, Medium, and Hard.
+- Different mole spawn rates and game settings for each level.
+- Special items, power-ups, and hazards:
+  - Golden Mole
+  - Clock
+  - Boss Mole
+  - Bombs
+- Combo multiplier for consecutive successful hits.
+- Frenzy Mode that doubles points during the final 8 seconds.
+- Achievement badges awarded on the game-over screen.
+- Leaderboard and player names saved using "localStorage".
+- Pause and resume functionality.
+- Sound on/off control.
+- Day and night themes.
+- Custom hammer cursor, hit particles, and score popups.
+- Responsive design for desktop and mobile devices.
+- Supports the reduced-motion accessibility setting.
+
+🎮 How to Play
+
+1. Enter your name.
+2. Choose a difficulty level: Easy, Medium, or Hard.
+3. Press Play to start the game.
+4. Wait for moles to pop out of the holes.
+5. Click or tap the moles to earn points.
+6. Avoid bombs because they reduce your score.
+7. Maintain consecutive hits to increase your combo multiplier.
+8. Score as many points as possible before the timer reaches zero.
+
+🏆 Scoring System
+
+Item| Result
+🐹 Normal Mole| +1 point
+🐹 Golden Mole| +5 points
+🦫 Boss Mole| +10 points (requires 3 hits)
+⏰ Clock| +3 seconds
+💣 Bomb| -3 points and combo lost
+
+Combo System
+
+- 5 consecutive hits: 2x points multiplier.
+- 10 consecutive hits: 3x points multiplier.
+
+Frenzy Mode
+
+During the final 8 seconds of the game, every point is doubled. This bonus stacks with the combo multiplier.
+
+⚡ Difficulty Levels
+
+Each difficulty level changes the time limit, maximum number of active moles, and probability of special items appearing.
+
+Setting| Easy| Medium| Hard
+Time Limit| 35s| 30s| 25s
+Moles at Once| 1| 2| 3
+Bomb Chance| 10%| 15%| 22%
+Golden Mole Chance| 6%| 7%| 8%
+Clock Chance| 5%| 4%| 3%
+Boss Mole Chance| 3%| 5%| 7%
+
+Note: The percentages represent the probability that a new pop-up will contain the corresponding special item. All remaining pop-ups contain normal moles.
+
+🥇 Achievement Badges
+
+Players can unlock different badges depending on their performance.
+
+Badge| Requirement
+🎯 Sharpshooter| Achieve 90% accuracy or higher with at least 10 hits.
+🔥 Combo King| Reach a combo streak of 10 or more.
+🛡️ Bomb Dodger| Hit no bombs with at least 10 hits.
+🌟 Golden Touch| Hit 2 or more golden moles.
+🦫 Boss Slayer| Defeat a boss mole.
+
+🚀 Run the Game Locally
+
+No installation, external libraries, build process, or server is required.
+
+1. Clone the Repository
+
+git clone https://github.com/USERNAME/REPOSITORY.git
+
+Replace "USERNAME" and "REPOSITORY" with the actual GitHub username and repository name.
+
+2. Open the Project Folder
+
+Navigate to the downloaded project folder.
+
+3. Run the Game
+
+Open "index.html" in any modern web browser.
+
+That's it! The game is ready to play.
+
+Note: The Fredoka font loads from Google Fonts when an internet connection is available. When offline, the game uses a similar rounded system font.
+
+📁 Project Structure
+
+Whack-a-Mole/
+│
+├── index.html      # Start screen, game screen and overlays
+├── style.css       # Garden theme, layout, animations and night mode
+├── script.js       # Game logic, levels, scoring and leaderboard
+└── README.md       # Project documentation
+
+⚙️ How It Works
+
+The project uses JavaScript to manage the game logic, scoring system, animations, and player interactions.
+
+Main Functions
+
+- LEVELS: An object in "script.js" containing the settings for each difficulty level. Game time, spawn chances, and other settings can be modified in one place.
+
+- spawn() and show(): Select an available hole randomly and determine which item will appear, such as a normal mole, bomb, golden mole, clock, or boss mole.
+
+- whack(): Handles player interactions, including missed hits, bombs, boss mole health, combo streaks, frenzy mode, and scoring.
+
+- multiplier() and frenzy(): Calculate bonus points based on consecutive hits and the remaining game time.
+
+- load() and save(): Handle leaderboard data using "localStorage", with "try/catch" to ensure the game continues working even if browser storage is unavailable.
+
+Security Consideration
+
+Player names on the leaderboard are displayed using "textContent" instead of "innerHTML". This prevents user-entered names from being interpreted as HTML.
+
+🎨 Customize the Game
+
+The game can be customized by modifying a few sections of the source code:
+
+- Difficulty and Timing: Change the time limits, spawn speed, and item probabilities in the "LEVELS" object at the top of "script.js".
+- Colors and Appearance: Modify the CSS variables inside the ":root" section at the top of "style.css".
+- Night Theme: Customize the night-mode appearance using "body.night".
+- Mole Appearance: Replace the emojis inside the "ICON" object to change the appearance of the game items.
+
+🧠 Concepts and Technologies Used
+
+This project demonstrates the practical use of fundamental web development concepts:
+
+- HTML5
+- CSS3
+- JavaScript
+- DOM Manipulation
+- Event Handling
+- Timers ("setTimeout" and "setInterval")
+- CSS Grid and Flexbox
+- CSS Animations and Custom Properties
+- Web Audio API
+- Browser "localStorage" API
+- Responsive Web Design
+
+👨‍💻 Project Team
+
+FAST-NUCES Karachi
+
+- Zohair Abbas
+- Rana Bilal
+- Shahriyar Rehman
+
+---
+
+Developed as an ICT Final Project.
