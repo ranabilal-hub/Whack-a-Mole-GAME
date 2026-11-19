@@ -1,38 +1,33 @@
-const GAME_TIME = 30;
+const $ = id => document.getElementById(id);
 const HOLE_COUNT = 9;
 
-// Har level ki setting: mole kitni der ruke aur bomb kitni baar aaye
+// Settings for each level: time, how long a mole stays, gap between pops,
+// how many moles at once, and the chance of bomb / golden mole / clock
 const LEVELS = {
-  easy:   { min: 600, max: 1200, bombChance: 0.10 },
-  medium: { min: 400, max: 1000, bombChance: 0.15 },
-  hard:   { min: 300, max: 700,  bombChance: 0.25 }
+  easy:   { label: 'Easy',   time: 35, stay: [900, 1400], gap: [800, 1200], max: 1, bomb: 0.10, gold: 0.06, clock: 0.05, boss: 0.03 },
+  medium: { label: 'Medium', time: 30, stay: [700, 1100], gap: [550, 900],  max: 2, bomb: 0.15, gold: 0.07, clock: 0.04, boss: 0.05 },
+  hard:   { label: 'Hard',   time: 25, stay: [500, 850],  gap: [350, 650],  max: 3, bomb: 0.22, gold: 0.08, clock: 0.03, boss: 0.07 }
 };
+const ICON = { mole: '🐹', gold: '🐹', bomb: '💣', clock: '⏰', boss: '🦫' };
 
-const grid = document.getElementById('grid');
-const scoreEl = document.getElementById('score');
-const timeEl = document.getElementById('time');
-const bestEl = document.getElementById('best');
-const barFill = document.getElementById('barFill');
-const levelEl = document.getElementById('level');
-const overlay = document.getElementById('gameOver');
-const finalScoreEl = document.getElementById('finalScore');
-const feedbackEl = document.getElementById('feedback');
-const gameBox = document.querySelector('.game');
+let level = 'medium', playerName = 'Player';
+let score, timeLeft, running = false, paused = false, soundOn = true;
+let combo, bestCombo, hits, misses, golds, bosses, bombsHit;
+let countdownId, spawnId, cdId;
+const holes = [];
 
-let score = 0;
-let timeLeft = GAME_TIME;
-let running = false;
-let countdownId, moleTimeoutId, lastIndex;
-const moles = [];
-
-// ---------- Best score (browser yaad rakhta hai) ----------
-let best = 0;
-try { best = Number(localStorage.getItem('wamBest')) || 0; } catch (e) {}
-bestEl.textContent = best;
+// ---------- Safe localStorage ----------
+function load(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch (e) { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
 
 // ---------- Sound ----------
 let audioCtx;
 function beep(freq, duration) {
+  if (!soundOn) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const osc = audioCtx.createOscillator();
@@ -46,158 +41,348 @@ function beep(freq, duration) {
   } catch (e) {}
 }
 
-// ---------- 9 holes banana ----------
+// ---------- Leaderboard ----------
+function renderBoard(el) {
+  const list = load('wamScores', []).sort((a, b) => b.s - a.s).slice(0, 5);
+  el.innerHTML = '';
+  if (!list.length) {
+    const li = document.createElement('li');
+    li.className = 'empty';
+    li.textContent = 'No scores yet. Be the first.';
+    el.appendChild(li);
+    return;
+  }
+  list.forEach((p, i) => {
+    const li = document.createElement('li');
+    const n = document.createElement('span');
+    n.textContent = (i + 1) + '. ' + p.n;   // textContent keeps names safe
+    const l = document.createElement('span');
+    l.textContent = LEVELS[p.l] ? LEVELS[p.l].label : '';
+    const s = document.createElement('b');
+    s.textContent = p.s;
+    li.append(n, l, s);
+    el.appendChild(li);
+  });
+}
+function bestForLevel() {
+  return Math.max(0, ...load('wamScores', []).filter(p => p.l === level).map(p => p.s));
+}
+
+// ---------- Screens ----------
+function showScreen(name) {
+  $('start').classList.toggle('hidden', name !== 'start');
+  $('game').classList.toggle('hidden', name !== 'game');
+  if (name === 'start') renderBoard($('boardStart'));
+}
+
+// ---------- Start screen ----------
+$('nameInput').value = load('wamName', '');
+document.querySelectorAll('.lvl').forEach(btn => {
+  btn.addEventListener('click', () => {
+    level = btn.dataset.level;
+    document.querySelectorAll('.lvl').forEach(b => b.classList.toggle('on', b === btn));
+  });
+});
+
+// Warm-up mole on the start screen
+const demoMole = $('demoMole');
+const warmLines = ['Tap the mole to warm up', 'Nice one!', 'Two down. One more.', 'Warmed up. Pick a level and play.'];
+let warm = 0;
+function demoLoop() {
+  if (!$('start').classList.contains('hidden')) {
+    demoMole.classList.add('up');
+    setTimeout(() => demoMole.classList.remove('up'), 1100);
+  }
+  setTimeout(demoLoop, 1900);
+}
+$('demoHole').addEventListener('click', () => {
+  if (!demoMole.classList.contains('up')) return;
+  demoMole.classList.remove('up');
+  warm = Math.min(warm + 1, warmLines.length - 1);
+  $('warmText').textContent = warmLines[warm];
+  beep(600, 0.1);
+});
+demoLoop();
+
+// ---------- Build the 9 holes ----------
 for (let i = 0; i < HOLE_COUNT; i++) {
   const cell = document.createElement('div');
   cell.className = 'cell';
-
-  const hole = document.createElement('div');
+  const hole = document.createElement('button');
   hole.className = 'hole';
-
-  const mole = document.createElement('div');
+  hole.setAttribute('aria-label', 'Hole ' + (i + 1));
+  const mole = document.createElement('span');
   mole.className = 'mole';
-  mole.textContent = '🐹';
-  mole.dataset.type = 'mole';
-  mole.addEventListener('click', () => whack(mole));
-
   hole.appendChild(mole);
   cell.appendChild(hole);
-  grid.appendChild(cell);
-  moles.push(mole);
+  $('grid').appendChild(cell);
+  const h = { cell, mole, type: null, timer: null };
+  hole.addEventListener('click', () => whack(h));
+  holes.push(h);
 }
 
-// ---------- Random helpers ----------
-function randomTime(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+// ---------- Spawning ----------
+const rand = ([min, max]) => Math.floor(Math.random() * (max - min + 1)) + min;
+const rush = () => (timeLeft <= 10 ? 0.7 : 1);   // last 10 seconds are faster
 
-function randomMole() {
-  let i;
-  do { i = Math.floor(Math.random() * HOLE_COUNT); } while (i === lastIndex);
-  lastIndex = i;
-  return moles[i];
-}
-
-// ---------- Mole ko bahar nikalna ----------
-function popMole() {
+function spawn() {
   if (!running) return;
+  const L = LEVELS[level];
+  if (!paused) {
+    const free = holes.filter(h => !h.type);
+    const active = holes.length - free.length;
+    if (active < L.max && free.length) show(free[Math.floor(Math.random() * free.length)]);
+  }
+  spawnId = setTimeout(spawn, rand(L.gap) * rush());
+}
 
-  const level = LEVELS[levelEl.value];
-  const mole = randomMole();
+function show(h) {
+  const L = LEVELS[level];
+  const r = Math.random();
+  let type = 'mole';
+  if (r < L.bomb) type = 'bomb';
+  else if (r < L.bomb + L.gold) type = 'gold';
+  else if (r < L.bomb + L.gold + L.clock) type = 'clock';
+  else if (r < L.bomb + L.gold + L.clock + L.boss) type = 'boss';
 
-  // Kabhi kabhi mole ki jagah bomb aata hai
-  if (Math.random() < level.bombChance) {
-    mole.textContent = '💣';
-    mole.dataset.type = 'bomb';
-  } else {
-    mole.textContent = '🐹';
-    mole.dataset.type = 'mole';
+  h.type = type;
+  h.hp = 3;
+  h.mole.textContent = ICON[type];
+  h.mole.className = 'mole up ' + type;
+  h.timer = setTimeout(() => hide(h), rand(L.stay) * rush() * (type === 'boss' ? 2 : 1));
+}
+
+function hide(h) {
+  clearTimeout(h.timer);
+  h.type = null;
+  h.mole.classList.remove('up');
+}
+
+// ---------- Effects ----------
+function floatText(h, text, kind) {
+  const p = document.createElement('div');
+  p.className = 'popup ' + kind;
+  p.textContent = text;
+  h.cell.appendChild(p);
+  setTimeout(() => p.remove(), 800);
+}
+function burst(h, icon) {
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement('span');
+    p.className = 'spark';
+    p.textContent = icon;
+    const a = Math.PI * 2 * i / 6;
+    p.style.setProperty('--dx', Math.cos(a) * 55 + 'px');
+    p.style.setProperty('--dy', Math.sin(a) * 55 + 'px');
+    h.cell.appendChild(p);
+    setTimeout(() => p.remove(), 600);
+  }
+}
+function swingHammer(h) {
+  const m = document.createElement('div');
+  m.className = 'hammer';
+  m.textContent = '🔨';
+  h.cell.appendChild(m);
+  setTimeout(() => m.remove(), 300);
+}
+function updateHud() {
+  $('score').textContent = score;
+  $('time').textContent = timeLeft;
+  $('game').classList.toggle('frenzy', frenzy());
+  $('combo').textContent = 'x' + multiplier();
+  $('combo').classList.toggle('hot', multiplier() > 1);
+  $('barFill').style.width = Math.min(100, timeLeft / LEVELS[level].time * 100) + '%';
+  $('barFill').classList.toggle('low', timeLeft <= 10);
+}
+const frenzy = () => running && timeLeft <= 8;
+const multiplier = () => (combo >= 10 ? 3 : combo >= 5 ? 2 : 1);
+
+// ---------- Hitting a hole ----------
+function whack(h) {
+  if (!running || paused) return;
+  swingHammer(h);
+
+  // Empty hole = miss
+  if (!h.type) {
+    misses++;
+    combo = 0;
+    beep(200, 0.05);
+    updateHud();
+    return;
   }
 
-  // Aakhri 15 second mein game tez ho jata hai
-  const max = timeLeft > 15 ? level.max : level.max * 0.7;
-  const duration = randomTime(level.min, Math.floor(max));
+  const type = h.type;
 
-  mole.classList.add('up');
-  moleTimeoutId = setTimeout(() => {
-    mole.classList.remove('up');
-    popMole();
-  }, duration);
-}
+  // Boss mole survives the first two hits
+  if (type === 'boss' && --h.hp > 0) {
+    floatText(h, h.hp === 1 ? 'One more!' : 'Ouch!', 'good');
+    burst(h, '⭐');
+    beep(400, 0.08);
+    return;
+  }
+  hide(h);
+  burst(h, type === 'bomb' ? '💥' : '✨');
 
-// ---------- +1 ya -3 ka popup ----------
-function showPopup(mole, text, kind) {
-  const popup = document.createElement('div');
-  popup.className = 'popup ' + kind;
-  popup.textContent = text;
-  mole.closest('.cell').appendChild(popup);
-  setTimeout(() => popup.remove(), 700);
-}
-
-// ---------- Mole par click ----------
-function whack(mole) {
-  if (!running || !mole.classList.contains('up')) return;
-
-  if (mole.dataset.type === 'bomb') {
+  if (type === 'bomb') {
     score = Math.max(0, score - 3);
-    showPopup(mole, '-3', 'bad');
+    bombsHit++;
+    combo = 0;
+    floatText(h, '-3', 'bad');
     beep(150, 0.25);
-    gameBox.classList.add('shake');
-    setTimeout(() => gameBox.classList.remove('shake'), 300);
+    $('game').classList.add('shake');
+    setTimeout(() => $('game').classList.remove('shake'), 300);
   } else {
-    score++;
-    showPopup(mole, '+1', 'good');
-    beep(600, 0.1);
+    hits++;
+    if (type === 'gold') golds++;
+    if (type === 'boss') bosses++;
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+    if (type === 'clock') {
+      timeLeft += 3;
+      floatText(h, '+3s', 'good');
+      beep(900, 0.15);
+    } else {
+      const base = type === 'boss' ? 10 : type === 'gold' ? 5 : 1;
+      const points = base * multiplier() * (frenzy() ? 2 : 1);
+      score += points;
+      floatText(h, '+' + points, type === 'gold' ? 'gold' : 'good');
+      beep(type === 'gold' ? 880 : 600, 0.1);
+    }
   }
-  scoreEl.textContent = score;
-
-  mole.classList.remove('up');
-  mole.classList.add('whacked');
-  setTimeout(() => mole.classList.remove('whacked'), 300);
-
-  // Foran agla mole bhejo
-  clearTimeout(moleTimeoutId);
-  popMole();
+  updateHud();
 }
 
-// ---------- Start, End, Reset ----------
-function startGame() {
-  if (running) return;
-  resetState();
+// ---------- Game flow ----------
+function startRound() {
+  const L = LEVELS[level];
+  score = 0; combo = 0; bestCombo = 0; hits = 0; misses = 0; golds = 0; bosses = 0; bombsHit = 0;
+  timeLeft = L.time;
+  paused = false;
   running = true;
-  popMole();
-
+  $('pauseBtn').textContent = 'Pause';
+  $('grid').classList.remove('paused');
+  $('best').textContent = bestForLevel();
+  updateHud();
+  spawn();
   countdownId = setInterval(() => {
+    if (paused) return;
     timeLeft--;
-    timeEl.textContent = timeLeft;
-    barFill.style.width = (timeLeft / GAME_TIME * 100) + '%';
+    updateHud();
     if (timeLeft <= 0) endGame();
   }, 1000);
 }
 
-function endGame() {
+function startGame() {
+  playerName = $('nameInput').value.trim() || 'Player';
+  save('wamName', $('nameInput').value.trim());
+  stopTimers();
+  $('gameOver').classList.add('hidden');
+  showScreen('game');
+  score = 0; combo = 0; timeLeft = LEVELS[level].time;
+  updateHud();
+
+  // 3, 2, 1 countdown
+  let n = 3;
+  const num = $('countNum');
+  $('countdown').classList.remove('hidden');
+  const tick = () => {
+    if (n === 0) {
+      $('countdown').classList.add('hidden');
+      startRound();
+      return;
+    }
+    num.textContent = n;
+    num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
+    beep(400, 0.1);
+    n--;
+    cdId = setTimeout(tick, 800);
+  };
+  tick();
+}
+
+function stopTimers() {
   running = false;
   clearInterval(countdownId);
-  clearTimeout(moleTimeoutId);
-  moles.forEach(m => m.classList.remove('up'));
+  clearTimeout(spawnId);
+  clearTimeout(cdId);
+  $('game').classList.remove('frenzy');
+  holes.forEach(hide);
+}
+
+function endGame() {
+  stopTimers();
   beep(300, 0.4);
 
-  finalScoreEl.textContent = score;
+  const prevBest = bestForLevel();
+  const scores = load('wamScores', []);
+  scores.push({ n: playerName, s: score, l: level });
+  save('wamScores', scores.sort((a, b) => b.s - a.s).slice(0, 20));
 
-  let message =
-    score >= 25 ? '🔥 Mole master!' :
-    score >= 15 ? '👍 Nice reflexes!' :
-    score >= 8  ? '🙂 Not bad, try again!' :
-                  '🐌 Keep practicing!';
-
-  if (score > best) {
-    best = score;
-    bestEl.textContent = best;
-    try { localStorage.setItem('wamBest', best); } catch (e) {}
-    message += ' 🏆 New best score!';
-  }
-  feedbackEl.textContent = message;
-  overlay.classList.remove('hidden');
+  const tries = hits + misses;
+  $('finalScore').textContent = score;
+  $('rHits').textContent = hits;
+  $('rAcc').textContent = (tries ? Math.round(hits / tries * 100) : 0) + '%';
+  $('rCombo').textContent = bestCombo;
+  const acc = tries ? hits / tries : 0;
+  const earned = [];
+  if (acc >= 0.9 && hits >= 10) earned.push('🎯 Sharpshooter');
+  if (bestCombo >= 10) earned.push('🔥 Combo king');
+  if (bombsHit === 0 && hits >= 10) earned.push('🛡️ Bomb dodger');
+  if (golds >= 2) earned.push('🌟 Golden touch');
+  if (bosses >= 1) earned.push('🦫 Boss slayer');
+  $('badges').innerHTML = '';
+  if (!earned.length) $('badges').textContent = 'None this time. Try for one next round.';
+  earned.forEach(t => {
+    const b = document.createElement('span');
+    b.textContent = t;
+    $('badges').appendChild(b);
+  });
+  $('rank').textContent =
+    score >= 40 ? 'Garden legend!' :
+    score >= 25 ? 'Mole master!' :
+    score >= 15 ? 'Sharp reflexes!' :
+    score >= 8  ? 'Getting there' :
+                  'Keep practicing';
+  $('feedback').textContent = score > prevBest && score > 0 ? 'New best on ' + LEVELS[level].label + '!' : '';
+  renderBoard($('boardOver'));
+  $('gameOver').classList.remove('hidden');
 }
 
-function resetState() {
-  clearInterval(countdownId);
-  clearTimeout(moleTimeoutId);
-  running = false;
-  score = 0;
-  timeLeft = GAME_TIME;
-  scoreEl.textContent = score;
-  timeEl.textContent = timeLeft;
-  barFill.style.width = '100%';
-  moles.forEach(m => m.classList.remove('up', 'whacked'));
-  overlay.classList.add('hidden');
+function togglePause() {
+  if (!running) return;
+  paused = !paused;
+  $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+  $('grid').classList.toggle('paused', paused);
+  if (paused) holes.forEach(hide);
 }
 
-function restartGame() {
-  resetState();
-  startGame();
+$('playBtn').addEventListener('click', startGame);
+$('playAgain').addEventListener('click', startGame);
+$('pauseBtn').addEventListener('click', togglePause);
+$('soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  $('soundBtn').textContent = soundOn ? 'Sound on' : 'Sound off';
+});
+function toMenu() {
+  stopTimers();
+  $('countdown').classList.add('hidden');
+  $('gameOver').classList.add('hidden');
+  showScreen('start');
 }
+$('quitBtn').addEventListener('click', toMenu);
+$('menuBtn').addEventListener('click', toMenu);
 
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('restartBtn').addEventListener('click', restartGame);
-document.getElementById('playAgain').addEventListener('click', restartGame);
+renderBoard($('boardStart'));
+
+// ---------- Day / night theme ----------
+let night = load('wamNight', false);
+function applyTheme() {
+  document.body.classList.toggle('night', night);
+  document.querySelectorAll('.themeBtn').forEach(b => b.textContent = night ? 'Day mode' : 'Night mode');
+}
+document.querySelectorAll('.themeBtn').forEach(b => b.addEventListener('click', () => {
+  night = !night;
+  save('wamNight', night);
+  applyTheme();
+}));
+applyTheme()
