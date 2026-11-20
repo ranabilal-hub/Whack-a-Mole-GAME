@@ -4,15 +4,15 @@ const HOLE_COUNT = 9;
 // Settings for each level: time, how long a mole stays, gap between pops,
 // how many moles at once, and the chance of bomb / golden mole / clock
 const LEVELS = {
-  easy:   { label: 'Easy',   time: 35, stay: [900, 1400], gap: [800, 1200], max: 1, bomb: 0.10, gold: 0.06, clock: 0.05, boss: 0.03 },
-  medium: { label: 'Medium', time: 30, stay: [700, 1100], gap: [550, 900],  max: 2, bomb: 0.15, gold: 0.07, clock: 0.04, boss: 0.05 },
-  hard:   { label: 'Hard',   time: 25, stay: [500, 850],  gap: [350, 650],  max: 3, bomb: 0.22, gold: 0.08, clock: 0.03, boss: 0.07 }
+  easy:   { label: 'Easy',   time: 40, stay: [900, 1400], gap: [800, 1200], max: 1, bomb: 0.10, gold: 0.06, clock: 0.05 },
+  medium: { label: 'Medium', time: 30, stay: [700, 1100], gap: [550, 900],  max: 2, bomb: 0.15, gold: 0.07, clock: 0.04 },
+  hard:   { label: 'Hard',   time: 25, stay: [500, 850],  gap: [350, 650],  max: 2, bomb: 0.22, gold: 0.08, clock: 0.03 }
 };
-const ICON = { mole: '🐹', gold: '🐹', bomb: '💣', clock: '⏰', boss: '🦫' };
+const ICON = { mole: '🐹', gold: '🐹', bomb: '💣', clock: '⏰' };
 
-let level = 'medium', playerName = 'Player';
+let level = 'medium';
 let score, timeLeft, running = false, paused = false, soundOn = true;
-let combo, bestCombo, hits, misses, golds, bosses, bombsHit;
+let combo, bestCombo, hits, misses;
 let countdownId, spawnId, cdId;
 const holes = [];
 
@@ -41,68 +41,30 @@ function beep(freq, duration) {
   } catch (e) {}
 }
 
-// ---------- Leaderboard ----------
-function renderBoard(el) {
-  const list = load('wamScores', []).sort((a, b) => b.s - a.s).slice(0, 5);
-  el.innerHTML = '';
-  if (!list.length) {
-    const li = document.createElement('li');
-    li.className = 'empty';
-    li.textContent = 'No scores yet. Be the first.';
-    el.appendChild(li);
-    return;
-  }
-  list.forEach((p, i) => {
-    const li = document.createElement('li');
-    const n = document.createElement('span');
-    n.textContent = (i + 1) + '. ' + p.n;   // textContent keeps names safe
-    const l = document.createElement('span');
-    l.textContent = LEVELS[p.l] ? LEVELS[p.l].label : '';
-    const s = document.createElement('b');
-    s.textContent = p.s;
-    li.append(n, l, s);
-    el.appendChild(li);
-  });
-}
+// ---------- Best score (one per level) ----------
 function bestForLevel() {
-  return Math.max(0, ...load('wamScores', []).filter(p => p.l === level).map(p => p.s));
+  return load('wamBest', {})[level] || 0;
+}
+function showBest() {
+  $('bestStart').textContent = bestForLevel();
+  $('bestLevel').textContent = LEVELS[level].label;
 }
 
 // ---------- Screens ----------
 function showScreen(name) {
   $('start').classList.toggle('hidden', name !== 'start');
   $('game').classList.toggle('hidden', name !== 'game');
-  if (name === 'start') renderBoard($('boardStart'));
+  if (name === 'start') showBest();
 }
 
 // ---------- Start screen ----------
-$('nameInput').value = load('wamName', '');
 document.querySelectorAll('.lvl').forEach(btn => {
   btn.addEventListener('click', () => {
     level = btn.dataset.level;
     document.querySelectorAll('.lvl').forEach(b => b.classList.toggle('on', b === btn));
+    showBest();
   });
 });
-
-// Warm-up mole on the start screen
-const demoMole = $('demoMole');
-const warmLines = ['Tap the mole to warm up', 'Nice one!', 'Two down. One more.', 'Warmed up. Pick a level and play.'];
-let warm = 0;
-function demoLoop() {
-  if (!$('start').classList.contains('hidden')) {
-    demoMole.classList.add('up');
-    setTimeout(() => demoMole.classList.remove('up'), 1100);
-  }
-  setTimeout(demoLoop, 1900);
-}
-$('demoHole').addEventListener('click', () => {
-  if (!demoMole.classList.contains('up')) return;
-  demoMole.classList.remove('up');
-  warm = Math.min(warm + 1, warmLines.length - 1);
-  $('warmText').textContent = warmLines[warm];
-  beep(600, 0.1);
-});
-demoLoop();
 
 // ---------- Build the 9 holes ----------
 for (let i = 0; i < HOLE_COUNT; i++) {
@@ -143,13 +105,11 @@ function show(h) {
   if (r < L.bomb) type = 'bomb';
   else if (r < L.bomb + L.gold) type = 'gold';
   else if (r < L.bomb + L.gold + L.clock) type = 'clock';
-  else if (r < L.bomb + L.gold + L.clock + L.boss) type = 'boss';
 
   h.type = type;
-  h.hp = 3;
   h.mole.textContent = ICON[type];
   h.mole.className = 'mole up ' + type;
-  h.timer = setTimeout(() => hide(h), rand(L.stay) * rush() * (type === 'boss' ? 2 : 1));
+  h.timer = setTimeout(() => hide(h), rand(L.stay) * rush());
 }
 
 function hide(h) {
@@ -188,13 +148,11 @@ function swingHammer(h) {
 function updateHud() {
   $('score').textContent = score;
   $('time').textContent = timeLeft;
-  $('game').classList.toggle('frenzy', frenzy());
   $('combo').textContent = 'x' + multiplier();
   $('combo').classList.toggle('hot', multiplier() > 1);
   $('barFill').style.width = Math.min(100, timeLeft / LEVELS[level].time * 100) + '%';
   $('barFill').classList.toggle('low', timeLeft <= 10);
 }
-const frenzy = () => running && timeLeft <= 8;
 const multiplier = () => (combo >= 10 ? 3 : combo >= 5 ? 2 : 1);
 
 // ---------- Hitting a hole ----------
@@ -213,19 +171,11 @@ function whack(h) {
 
   const type = h.type;
 
-  // Boss mole survives the first two hits
-  if (type === 'boss' && --h.hp > 0) {
-    floatText(h, h.hp === 1 ? 'One more!' : 'Ouch!', 'good');
-    burst(h, '⭐');
-    beep(400, 0.08);
-    return;
-  }
   hide(h);
   burst(h, type === 'bomb' ? '💥' : '✨');
 
   if (type === 'bomb') {
     score = Math.max(0, score - 3);
-    bombsHit++;
     combo = 0;
     floatText(h, '-3', 'bad');
     beep(150, 0.25);
@@ -233,8 +183,6 @@ function whack(h) {
     setTimeout(() => $('game').classList.remove('shake'), 300);
   } else {
     hits++;
-    if (type === 'gold') golds++;
-    if (type === 'boss') bosses++;
     combo++;
     bestCombo = Math.max(bestCombo, combo);
     if (type === 'clock') {
@@ -242,8 +190,7 @@ function whack(h) {
       floatText(h, '+3s', 'good');
       beep(900, 0.15);
     } else {
-      const base = type === 'boss' ? 10 : type === 'gold' ? 5 : 1;
-      const points = base * multiplier() * (frenzy() ? 2 : 1);
+      const points = (type === 'gold' ? 5 : 1) * multiplier();
       score += points;
       floatText(h, '+' + points, type === 'gold' ? 'gold' : 'good');
       beep(type === 'gold' ? 880 : 600, 0.1);
@@ -255,7 +202,7 @@ function whack(h) {
 // ---------- Game flow ----------
 function startRound() {
   const L = LEVELS[level];
-  score = 0; combo = 0; bestCombo = 0; hits = 0; misses = 0; golds = 0; bosses = 0; bombsHit = 0;
+  score = 0; combo = 0; bestCombo = 0; hits = 0; misses = 0;
   timeLeft = L.time;
   paused = false;
   running = true;
@@ -273,8 +220,6 @@ function startRound() {
 }
 
 function startGame() {
-  playerName = $('nameInput').value.trim() || 'Player';
-  save('wamName', $('nameInput').value.trim());
   stopTimers();
   $('gameOver').classList.add('hidden');
   showScreen('game');
@@ -305,7 +250,6 @@ function stopTimers() {
   clearInterval(countdownId);
   clearTimeout(spawnId);
   clearTimeout(cdId);
-  $('game').classList.remove('frenzy');
   holes.forEach(hide);
 }
 
@@ -314,37 +258,25 @@ function endGame() {
   beep(300, 0.4);
 
   const prevBest = bestForLevel();
-  const scores = load('wamScores', []);
-  scores.push({ n: playerName, s: score, l: level });
-  save('wamScores', scores.sort((a, b) => b.s - a.s).slice(0, 20));
+  const isBest = score > prevBest;
+  if (isBest) {
+    const all = load('wamBest', {});
+    all[level] = score;
+    save('wamBest', all);
+  }
 
   const tries = hits + misses;
   $('finalScore').textContent = score;
   $('rHits').textContent = hits;
   $('rAcc').textContent = (tries ? Math.round(hits / tries * 100) : 0) + '%';
   $('rCombo').textContent = bestCombo;
-  const acc = tries ? hits / tries : 0;
-  const earned = [];
-  if (acc >= 0.9 && hits >= 10) earned.push('🎯 Sharpshooter');
-  if (bestCombo >= 10) earned.push('🔥 Combo king');
-  if (bombsHit === 0 && hits >= 10) earned.push('🛡️ Bomb dodger');
-  if (golds >= 2) earned.push('🌟 Golden touch');
-  if (bosses >= 1) earned.push('🦫 Boss slayer');
-  $('badges').innerHTML = '';
-  if (!earned.length) $('badges').textContent = 'None this time. Try for one next round.';
-  earned.forEach(t => {
-    const b = document.createElement('span');
-    b.textContent = t;
-    $('badges').appendChild(b);
-  });
   $('rank').textContent =
     score >= 40 ? 'Garden legend!' :
     score >= 25 ? 'Mole master!' :
     score >= 15 ? 'Sharp reflexes!' :
     score >= 8  ? 'Getting there' :
                   'Keep practicing';
-  $('feedback').textContent = score > prevBest && score > 0 ? 'New best on ' + LEVELS[level].label + '!' : '';
-  renderBoard($('boardOver'));
+  $('feedback').textContent = isBest ? 'New best on ' + LEVELS[level].label + '!' : 'Your best on ' + LEVELS[level].label + ': ' + prevBest;
   $('gameOver').classList.remove('hidden');
 }
 
@@ -372,7 +304,7 @@ function toMenu() {
 $('quitBtn').addEventListener('click', toMenu);
 $('menuBtn').addEventListener('click', toMenu);
 
-renderBoard($('boardStart'));
+showBest();
 
 // ---------- Day / night theme ----------
 let night = load('wamNight', false);
@@ -385,4 +317,4 @@ document.querySelectorAll('.themeBtn').forEach(b => b.addEventListener('click', 
   save('wamNight', night);
   applyTheme();
 }));
-applyTheme()
+applyTheme();
