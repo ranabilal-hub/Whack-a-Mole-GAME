@@ -14,21 +14,13 @@
     <h1 class="logo">Whack-a-Mole</h1>
     <p class="tag">Someone is digging up the garden. Stop them.</p>
 
-    <!-- Warm-up mole: tap it before you play -->
-    <button class="hole demo" id="demoHole" aria-label="Practice mole">
-      <span class="mole" id="demoMole">🐹</span>
-    </button>
-    <p class="warm" id="warmText">Tap the mole to warm up</p>
-
-    <label class="field">Your name
-      <input id="nameInput" maxlength="12" placeholder="Player" autocomplete="off">
-    </label>
-
     <div class="levels" id="levels" role="group" aria-label="Difficulty">
-      <button class="lvl" data-level="easy"><b>Easy</b><small>35s, one mole</small></button>
+      <button class="lvl" data-level="easy"><b>Easy</b><small>40s, one mole</small></button>
       <button class="lvl on" data-level="medium"><b>Medium</b><small>30s, two moles</small></button>
-      <button class="lvl" data-level="hard"><b>Hard</b><small>25s, three moles</small></button>
+      <button class="lvl" data-level="hard"><b>Hard</b><small>25s, two moles, fast</small></button>
     </div>
+
+    <p class="bestline">Your best on <span id="bestLevel">Medium</span>: <b id="bestStart">0</b></p>
 
     <button class="big" id="playBtn">Play</button>
     <button class="themeBtn">Night mode</button>
@@ -39,16 +31,11 @@
         <li><span class="ico">🐹</span> Mole <em>+1</em></li>
         <li><span class="ico gold">🐹</span> Golden mole <em>+5</em></li>
         <li><span class="ico">⏰</span> Clock <em>+3 seconds</em></li>
-        <li><span class="ico">🦫</span> Boss mole, 3 hits <em>+10</em></li>
         <li><span class="ico">💣</span> Bomb <em>-3 and combo lost</em></li>
       </ul>
-      <p class="note">Hit 5 in a row for double points, 10 in a row for triple. Tapping an empty hole breaks your combo. In the last 8 seconds, frenzy doubles every point.</p>
+      <p class="note">Hit 5 in a row for double points, 10 in a row for triple. Tapping an empty hole breaks your combo.</p>
     </section>
 
-    <section class="boardwrap">
-      <h2>Top players</h2>
-      <ol class="board" id="boardStart"></ol>
-    </section>
   </main>
 
   <!-- ===== GAME SCREEN ===== -->
@@ -60,7 +47,6 @@
       <div class="stat">Best <b id="best">0</b></div>
     </div>
     <div class="bar"><div id="barFill"></div></div>
-    <p class="frenzyMsg">Frenzy! Double points</p>
     <div class="grid" id="grid"></div>
     <div class="row">
       <button id="pauseBtn">Pause</button>
@@ -83,10 +69,6 @@
         <div><b id="rAcc">0%</b>accuracy</div>
         <div><b id="rCombo">0</b>best streak</div>
       </div>
-      <h3>Badges earned</h3>
-      <div class="badges" id="badges"></div>
-      <h3>Top players</h3>
-      <ol class="board" id="boardOver"></ol>
       <div class="row">
         <button class="big" id="playAgain">Play again</button>
         <button id="menuBtn">Menu</button>
